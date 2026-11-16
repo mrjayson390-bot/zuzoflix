@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trending films</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/css/site.css?v=13"></head>
+<body>
+<main class="wrap">
+  <h1 class="ptitle" id="ttl">Trending this week</h1>
+  <div class="meta" id="sub">The most talked-about films in the world right now, from TMDB. Titles marked INFO ONLY are not shown on Zuzoflix: tap them for the story and the trailer.</div>
+  <div class="chips" id="chips" style="margin-top:14px"></div>
+  <div class="grid" id="grid" style="margin-top:12px"></div>
+  <div class="empty" id="empty" hidden>Loading trending films...</div>
+</main>
+<script src="/assets/js/app.js?v=15"></script><script src="/assets/js/trending.js?v=15"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search), kind = q.get('kind') === 'tv' ? 'tv' : 'movie', W = kind === 'tv' ? 'series' : 'films', base = '/trending.html' + (kind === 'tv' ? '?kind=tv' : '');
+  await Z.boot(kind === 'tv' ? 'series' : 'movies'); document.title = kind === 'tv' ? 'Series' : 'Movies';
+  const empty = document.getElementById('empty'); empty.hidden = false;
+  const all = await ZT.loadAll(10, kind);
+  if (!all.length) { empty.textContent = 'Trending films are not available right now.'; return; }
+  empty.hidden = true;
+  const g = ZT.byGenre(all), names = Object.keys(g).sort(), want = q.get('genre') || '';
+  const show = n => {
+    const list = n && g[n] ? g[n] : all, grid = document.getElementById('grid');
+    document.getElementById('ttl').textContent = n && g[n] ? n + ': trending ' + W + ' this week' : 'Trending ' + W + ' this week';
+    document.getElementById('chips').innerHTML = [['', 'All (' + all.length + ')']].concat(names.map(x => [x, x + ' (' + g[x].length + ')'])).map(([k, l]) => `<a class="chip ${k === (g[n] ? n : '') ? 'on' : ''}" href="${k ? '/trending.html?' + (kind === 'tv' ? 'kind=tv&' : '') + 'genre=' + encodeURIComponent(k) : base}" data-g="${Z.esc(k)}">${Z.esc(l)}</a>`).join('');
+    document.getElementById('chips').querySelectorAll('a').forEach(a => a.onclick = e => { e.preventDefault(); history.replaceState(null, '', a.href); show(a.dataset.g); });
+    grid.innerHTML = list.map(ZT.card).join(''); ZT.bind(grid);
+  };
+  show(want);
+})();
+</script></body></html>

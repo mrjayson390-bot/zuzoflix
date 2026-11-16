@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Translated and local films</title>
+<meta name="description" content="Watch translated and local films online, free and premium.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/css/site.css?v=14"></head>
+<body>
+<main>
+  <div class="hero" id="hero" hidden><button class="arrow l" id="hl" aria-label="Previous">&lsaquo;</button><div class="track" id="track"></div><button class="arrow r" id="hr" aria-label="Next">&rsaquo;</button></div>
+  <div id="rows"></div>
+  <div class="empty" id="empty" hidden>No films have been published yet.</div>
+</main>
+<script src="/assets/js/app.js?v=15"></script><script src="/assets/js/trending.js?v=15"></script>
+<script>
+(async () => {
+  await Z.boot('home');
+  const d = await Z.api('home');
+  if (!d.ok) { document.getElementById('empty').hidden = false; document.getElementById('empty').textContent = d.message || 'Could not load films.'; return; }
+  /* The big auto-sliding banner: slides are ready-made HTML; it moves by itself and stops when someone touches it. */
+  const startHero = (html, bind) => {
+    const t = document.getElementById('track'); t.innerHTML = html; document.getElementById('hero').hidden = false; if (bind) bind(t);
+    const step = () => Math.min(t.clientWidth * 0.8, 900) + 14;
+    document.getElementById('hl').onclick = () => t.scrollBy({ left: -step(), behavior: 'smooth' });
+    document.getElementById('hr').onclick = () => t.scrollBy({ left: step(), behavior: 'smooth' });
+    let idle = 0; setInterval(() => { if (document.hidden || ++idle < 6) return; idle = 0; const end = t.scrollLeft + t.clientWidth >= t.scrollWidth - 8; t.scrollTo({ left: end ? 0 : t.scrollLeft + step(), behavior: 'smooth' }); }, 1000);
+    ['touchstart', 'mousedown', 'wheel'].forEach(e => t.addEventListener(e, () => idle = -10, { passive: true }));
+  };
+  /* TMDB's most trending and best rated films: the banner, then rows grouped under TMDB's own genres (information only). */
+  const trend = async (needHero) => {
+    const all = await ZT.loadAll(5); if (!all.length) return false;
+    if (needHero) {
+      const good = all.filter(i => i.poster && i.rating >= 7 && i.votes >= 300);
+      const pick = (good.length >= 5 ? good : all.filter(i => i.poster).sort((a, b) => b.rating - a.rating)).slice(0, 8);
+      if (pick.length) startHero(pick.map(i => { ZT.items[i.tmdb_id] = i; return `<article class="slide"><div class="bg" style="background-image:url('${Z.esc(i.poster)}')"></div><img class="pic" alt="" src="${Z.esc(i.poster)}">
+        <div class="txt"><h2>${Z.esc(i.title)}${i.year ? ' (' + Z.esc(i.year) + ')' : ''}</h2><p>&#9733; ${i.rating.toFixed(1)} &middot; ${Z.esc(i.overview || '')}</p>
+        <a class="btn play" href="#" data-t="${i.tmdb_id}">More info</a></div></article>`; }).join(''), t => t.querySelectorAll('.btn.play').forEach(a => a.onclick = e => { e.preventDefault(); ZT.open(ZT.items[a.dataset.t]); }));
+    }
+    const mk = (title, more, items) => { const s = document.createElement('section'); s.className = 'row wrap'; s.innerHTML = `<div class="hd"><h3>${Z.esc(title)}</h3><a class="more" href="${more}">See all</a></div><div class="lane">${items.map(ZT.card).join('')}</div>`; ZT.bind(s); return s; };
+    const frag = document.createDocumentFragment(); frag.appendChild(mk('Trending movies this week', '/trending.html', all.slice(0, 14)));
+    const tv = await ZT.loadAll(1, 'tv'); if (tv.length) frag.appendChild(mk('Trending series this week', '/trending.html?kind=tv', tv.slice(0, 14)));
+    const g = ZT.byGenre(all); Object.entries(g).filter(([, v]) => v.length >= 4).sort((a, b) => b[1].length - a[1].length).slice(0, 10).forEach(([n, v]) => frag.appendChild(mk(n, '/trending.html?genre=' + encodeURIComponent(n), v.slice(0, 14))));
+    document.getElementById('rows').appendChild(frag); return true;
+  };
+  if (!d.hero.length && !d.rows.length) { if (!(await trend(true))) { document.getElementById('empty').hidden = false; document.getElementById('empty').textContent = 'No films to show right now.'; } return; }
+  if (d.hero.length) startHero(d.hero.map(m => `<article class="slide"><div class="bg" style="${m.poster ? `background-image:url('${Z.esc(m.poster)}')` : ''}"></div>${m.poster ? `<img class="pic" alt="" src="${Z.esc(m.poster)}">` : ''}
+      <div class="txt"><h2>${Z.esc(m.title)}${m.translator ? ' - ' + Z.esc(m.translator) : ''}</h2><p>${Z.esc(m.description || '')}</p>
+      <a class="btn play" href="/watch/${encodeURIComponent(m.slug)}?play=1">&#9658; Play</a>${m.access === 'premium' && Z.cfg.payments_enabled ? '<a class="btn sub" href="/watch/' + encodeURIComponent(m.slug) + '">Subscribe</a>' : ''}</div></article>`).join(''));
+  document.getElementById('rows').innerHTML = d.rows.map(Z.row).join('');
+  trend(!d.hero.length);
+})();
+</script></body></html>

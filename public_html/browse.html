@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Browse</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/css/site.css?v=13"></head>
+<body>
+<main class="wrap">
+  <h1 class="ptitle" id="ttl">Browse</h1>
+  <div class="meta" id="count"></div>
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>Nothing found here yet.</div>
+  <div class="pager" id="pager"></div>
+</main>
+<script src="/assets/js/app.js?v=15"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search);
+  const type = q.get('type') || '', cat = q.get('cat') || '', term = q.get('q') || '', acc = q.get('access') || '', sort = q.get('sort') || 'new', page = Math.max(1, +q.get('page') || 1);
+  await Z.boot(type === 'series' ? 'series' : type === 'movie' ? 'movies' : '');
+  const title = term ? 'Results for "' + term + '"' : cat ? cat : type === 'series' ? 'Series' : type === 'movie' ? 'Movies' : acc === 'free' ? 'Free movies' : sort === 'popular' ? 'Most watched' : 'Latest films';
+  document.getElementById('ttl').textContent = title; document.title = title;
+  const link = (o) => { const n = new URLSearchParams(q); Object.entries(o).forEach(([k, v]) => v ? n.set(k, v) : n.delete(k)); n.delete('page'); return '/browse.html?' + n; };
+  document.getElementById('chips').innerHTML = [['New', {sort: ''}], ['Most watched', {sort: 'popular'}], ['A to Z', {sort: 'az'}]].map(([l, o]) => `<a class="chip ${((o.sort || 'new') === sort) ? 'on' : ''}" href="${link(o)}">${l}</a>`).join('');
+  const p = new URLSearchParams({ type, cat, q: term, access: acc, sort, page }); [...p.keys()].forEach(k => { if (!p.get(k)) p.delete(k); });
+  const d = await Z.api('movies?' + p);
+  if (!d.ok) { document.getElementById('empty').hidden = false; document.getElementById('empty').textContent = d.message || 'Could not load films.'; return; }
+  document.getElementById('count').textContent = d.total + (d.total === 1 ? ' title' : ' titles');
+  if (!d.items.length) document.getElementById('empty').hidden = false;
+  document.getElementById('grid').innerHTML = d.items.map(Z.card).join('');
+  if (d.pages > 1) {
+    const go = n => { const x = new URLSearchParams(q); x.set('page', n); return '/browse.html?' + x; };
+    document.getElementById('pager').innerHTML = (d.page > 1 ? `<a class="btn ghost" href="${go(d.page - 1)}">Previous</a>` : '') + `<span class="meta" style="align-self:center">Page ${d.page} of ${d.pages}</span>` + (d.page < d.pages ? `<a class="btn ghost" href="${go(d.page + 1)}">Next</a>` : '');
+  }
+})();
+</script></body></html>

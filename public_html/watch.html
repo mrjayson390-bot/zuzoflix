@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Watch</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/assets/css/site.css?v=13"></head>
+<body>
+<main>
+  <div class="wrap"><div class="watch" id="w" hidden>
+    <div>
+      <div class="player" id="player"><div class="cover" id="cover"><button id="go" aria-label="Play"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></button></div><div class="msg" id="msg"></div>
+        <div class="qctl" id="qctl" hidden><button type="button" id="qbtn" aria-haspopup="true">Auto</button><div class="qmenu" id="qmenu" hidden></div></div></div>
+      <div class="info"><h1 id="t"></h1><div class="facts" id="facts"></div><div class="eps" id="eps"></div><p class="desc" id="desc"></p><div id="tmx"></div></div>
+    </div>
+    <aside class="side"><img id="poster" alt=""></aside>
+  </div><div class="empty" id="err" hidden></div></div>
+  <div id="rel"></div>
+</main>
+<script src="/assets/js/app.js?v=15"></script>
+<script src="/assets/js/quality.js?v=3"></script>
+<script>
+(async () => {
+  await Z.boot('');
+  const slug = decodeURIComponent(location.pathname.replace(/^\/watch\//, '').replace(/\/$/, ''));
+  const d = await Z.api('movie/' + encodeURIComponent(slug));
+  const err = document.getElementById('err');
+  if (!d.ok) { err.hidden = false; err.textContent = d.message || 'This title is not available.'; return; }
+  const m = d.movie; document.title = m.title;
+  document.getElementById('w').hidden = false;
+  document.getElementById('t').textContent = m.title + (m.translator ? ' - ' + m.translator : '');
+  document.getElementById('desc').textContent = m.description || '';
+  document.getElementById('desc').style.whiteSpace = 'pre-line';
+  const f = [m.year, m.category, m.language, m.duration_min ? m.duration_min + ' min' : '', m.type === 'series' ? 'Series' : 'Movie', m.access === 'premium' ? 'Premium' : 'Free', m.views + ' views'].filter(Boolean);
+  document.getElementById('facts').innerHTML = f.map(x => `<span>${Z.esc(x)}</span>`).join('');
+  if (m.poster) { document.getElementById('poster').src = m.poster; document.getElementById('cover').style.backgroundImage = `url('${m.poster}')`; } else document.getElementById('poster').remove();
+  let ep = m.episodes && m.episodes.length ? m.episodes[0].id : 0;
+  if (m.type === 'series') {
+    const box = document.getElementById('eps');
+    const draw = () => box.innerHTML = m.episodes.map(e => `<button class="${e.id === ep ? 'on' : ''}" data-id="${e.id}">${Z.esc(e.title || 'Episode ' + e.num)}</button>`).join('');
+    draw(); box.onclick = ev => { const b = ev.target.closest('button'); if (!b) return; ep = +b.dataset.id; draw(); start(); };
+  }
+  const msg = document.getElementById('msg'), player = document.getElementById('player');
+  let qm = null;
+  async function start() {
+    if (!m.playable) { msg.textContent = 'This title has no video yet.'; return; }
+    msg.textContent = 'Loading...';
+    const r = await Z.api('movie/' + encodeURIComponent(m.slug) + '/play', { method: 'POST', body: JSON.stringify({ episode: ep }) });
+    if (!r.ok) { msg.textContent = r.message || 'Could not start the video.'; return; }
+    msg.textContent = '';
+    const old = player.querySelector('video,iframe'); if (old) old.remove(); if (qm) qm.destroy();
+    document.getElementById('cover').hidden = true;
+    if (r.embed) {                                                                   // the owner's own YouTube video, shown inside our page
+      const fr = document.createElement('iframe'); fr.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(r.embed) + '?autoplay=1&rel=0';
+      fr.allow = 'autoplay; fullscreen; picture-in-picture'; fr.allowFullscreen = true; fr.style.cssText = 'width:100%;aspect-ratio:16/9;border:0;display:block;background:#000';
+      player.prepend(fr); const qc = document.getElementById('qctl'); if (qc) qc.hidden = true; return;
+    }
+    const v =document.createElement('video'); v.controls = true; v.playsInline = true; v.preload = 'auto'; player.prepend(v);
+    const refresh = async () => { const x = await Z.api('movie/' + encodeURIComponent(m.slug) + '/play', { method: 'POST', body: JSON.stringify({ episode: ep, refresh: true }) }); return x.ok ? x.sources : null; };
+    qm = ZQuality(v, r.sources || [{ id: 0, label: 'Original', height: 9999, url: r.url }], { button: document.getElementById('qbtn'), menu: document.getElementById('qmenu'), box: document.getElementById('qctl'), refresh,
+      onError: text => { document.getElementById('cover').hidden = false; msg.textContent = text; } });
+  }
+  document.getElementById('go').onclick = start;
+  if (new URLSearchParams(location.search).get('play') === '1') start();
+  if (m.has_tmdb) Z.api('movie/' + encodeURIComponent(m.slug) + '/extras').then(x => {         // rating, cast and trailer from TMDB (only when this film was matched)
+    if (!x || !x.ok || !x.enabled) return; const box = document.getElementById('tmx'); let h = '';
+    h += '<div class="tmrow">' + (x.rating > 0 ? `<span class="rate">&#9733; ${x.rating.toFixed(1)}</span><span class="note">${x.votes.toLocaleString()} votes</span>` : '') + (x.trailer ? '<button type="button" class="btn ghost" id="trl">&#9658; Watch trailer</button>' : '') + '</div>';
+    if (x.tagline) h += `<p class="tagline">${Z.esc(x.tagline)}</p>`;
+    if (x.cast && x.cast.length) h += '<h3 class="sech">Cast</h3><div class="lane cast">' + x.cast.map(p => `<div class="cm">${p.photo ? `<img loading="lazy" alt="" src="${Z.esc(p.photo)}">` : '<div class="nophoto"></div>'}<b>${Z.esc(p.name)}</b><span>${Z.esc(p.character)}</span></div>`).join('') + '</div>';
+    h += '<p class="tmcredit"><img src="/assets/img/tmdb.svg" alt="TMDB" onerror="this.remove()"></p>';
+    box.innerHTML = h;
+    const t =document.getElementById('trl'); if (t) t.onclick = () => { const o = document.createElement('div'); o.className = 'modal'; o.innerHTML = `<div class="mbox"><button type="button" class="mx" aria-label="Close">&times;</button><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(x.trailer)}?autoplay=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Trailer"></iframe></div>`; o.onclick = e => { if (e.target === o || e.target.classList.contains('mx')) o.remove(); }; document.body.appendChild(o); };
+  });
+  if (d.related.length) document.getElementById('rel').innerHTML = Z.row({ title: 'You may also like', more: '/browse.html', items: d.related });
+})();
+</script></body></html>

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/assets/css/site.css?v=13">
+<style>
+.ad{max-width:1100px;margin:0 auto;padding:18px clamp(12px,3vw,24px) 60px}
+.bar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
+.bar h1{font-size:20px}.acts{display:flex;gap:8px;flex-wrap:wrap}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+.login{max-width:360px;margin:12vh auto}
+label{display:block;font-size:12.5px;color:var(--mute);margin:12px 0 5px}
+input,select,textarea{width:100%;padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);color:var(--text);font:inherit;outline:0}
+input:focus,select:focus,textarea:focus{border-color:var(--teal)}
+textarea{min-height:90px;resize:vertical}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 14px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;color:var(--mute);font-weight:500;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+td img{width:38px;height:56px;object-fit:cover;border-radius:5px;background:var(--bg)}
+.st{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--line)}.st.pub{background:var(--teal);border-color:var(--teal)}
+.sm{padding:5px 11px;font-size:12px;border-radius:6px;background:var(--bg);border:1px solid var(--line)}
+.sm.red{border-color:#7a2630;color:#ff9aa5}
+.bt{background:var(--teal);color:#fff;padding:10px 18px;border-radius:8px;font-weight:600}
+.bt.alt{background:var(--bg);border:1px solid var(--line)}
+.up{border:1px dashed var(--line);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.up .pv{width:54px;height:80px;border-radius:6px;object-fit:cover;background:var(--bg)}
+.prog{height:7px;background:var(--bg);border-radius:9px;overflow:hidden;flex:1;min-width:140px}.prog i{display:block;height:100%;width:0;background:var(--teal);transition:width .2s}
+.note{font-size:12px;color:var(--mute)}.err{color:#ff9aa5;font-size:13px;margin-top:8px}.ok{color:#7be0c3;font-size:13px;margin-top:8px}
+.ep{display:grid;grid-template-columns:70px 1fr 1.4fr auto;gap:8px;align-items:center;margin:8px 0}
+details{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:10px 14px}summary{cursor:pointer;color:var(--mute)}
+.chk{display:flex;align-items:center;gap:8px;margin-top:14px}.chk input{width:auto}
+@media(max-width:700px){.g2,.g3{grid-template-columns:1fr}.ep{grid-template-columns:60px 1fr}.hide-s{display:none}}
+</style></head>
+<body><div class="ad" id="app"></div>
+<script src="/assets/js/app.js?v=15"></script>
+<script>
+const $ = s => document.querySelector(s), app = $('#app'), E = Z.esc;
+let LIST = [], ME = null;
+
+async function boot() { const r = await Z.api('admin/me'); if (r.ok) { ME = r.email; list(); } else login(); }
+
+function login(msg) {
+  app.innerHTML = `<form class="box login" id="lf"><h1 style="font-size:22px;color:var(--brand);margin-bottom:6px">Admin</h1><div class="note">Sign in to manage films.</div>
+    <label>Email</label><input name="email" type="email" required autocomplete="username"><label>Password</label><input name="password" type="password" required autocomplete="current-password">
+    <div class="err" id="le">${E(msg || '')}</div><button class="bt" style="width:100%;margin-top:14px">Sign in</button></form>`;
+  $('#lf').onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target); const r = await Z.api('admin/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(f)) }); if (r.ok) { ME = r.email; list(); } else $('#le').textContent = r.message || 'Could not sign in.'; };
+}
+
+async function list() {
+  clearInterval(window.__imp);
+  const [m, s] = await Promise.all([Z.api('admin/movies'), Z.api('admin/stats')]);
+  if (!m.ok) { login(m.message); return; } LIST = m.items;
+  app.innerHTML = `<div class="bar"><h1>Films <span class="note">${s.published || 0} published of ${s.movies || 0} - ${s.views || 0} views</span></h1><div class="acts"><button class="bt" id="new">Add a film</button><button class="bt" id="imp" style="background:var(--play);color:#1a1200">Import from links</button><button class="bt alt" id="inb">Inbox</button><button class="bt alt" id="tm">Match with TMDB</button><button class="bt alt" id="chk">Storage check</button><button class="bt alt" id="out">Sign out</button></div></div><div id="msg"></div>
+  <div class="box" style="overflow-x:auto"><table><thead><tr><th></th><th>Title</th><th class="hide-s">Translator</th><th class="hide-s">Category</th><th>Access</th><th>Status</th><th class="hide-s">Views</th><th></th></tr></thead><tbody>
+  ${LIST.map(x => `<tr><td>${x.poster ? `<img src="${E(x.poster)}" alt="">` : ''}</td><td><b>${E(x.title)}</b><div class="note">${x.type}${x.has_video || x.type === 'series' ? '' : ' - no video yet'}</div></td><td class="hide-s">${E(x.translator)}</td><td class="hide-s">${E(x.category)}</td><td>${x.access}</td><td><span class="st ${x.status === 'published' ? 'pub' : ''}">${x.status}</span></td><td class="hide-s">${x.views}</td>
+  <td style="white-space:nowrap"><button class="sm" data-e="${x.id}">Edit</button> <button class="sm red" data-d="${x.id}">Delete</button></td></tr>`).join('') || '<tr><td colspan="8" class="note" style="padding:20px">No films yet. Press "Add a film".</td></tr>'}
+  </tbody></table></div>`;
+  $('#new').onclick = () => form(null); $('#imp').onclick = importView; $('#out').onclick = async () => { await Z.api('admin/logout', { method: 'POST' }); login(); };
+  $('#inb').onclick = inboxView; Z.api('admin/inbox').then(r => { if (r.ok && (r.new_submissions + r.new_reports)) $('#inb').textContent = 'Inbox (' + (r.new_submissions + r.new_reports) + ' new)'; });
+  $('#tm').onclick = async () => { $('#msg').innerHTML = '<div class="note">Matching films with TMDB...</div>'; const r = await Z.api('admin/lookup/match-all', { method: 'POST' });
+    $('#msg').innerHTML = r.ok ? `<div class="${r.matched.length ? 'ok' : 'note'}">${r.matched.length ? 'Matched: ' + E(r.matched.join(', ')) : 'No new matches.'}${r.unmatched.length ? ' Not matched (open the film and use Find details): ' + E(r.unmatched.join(', ')) : ''}</div>` : `<div class="err">${E(r.message || 'Could not match.')}</div>`; };
+  $('#chk').onclick = async () => { $('#msg').innerHTML = '<div class="note">Checking storage...</div>'; const r = await Z.api('admin/storage-check', { method: 'POST' }); $('#msg').innerHTML = `<div class="${r.ok ? 'ok' : 'err'}">${r.ok ? 'Storage works: ' : 'Storage problem: '}${E(r.detail || r.message || '')}</div>`; };
+  app.querySelectorAll('[data-e]').forEach(b => b.onclick = () => form(+b.dataset.e));
+  app.querySelectorAll('[data-d]').forEach(b => b.onclick = async () => { const x = LIST.find(i => i.id === +b.dataset.d); if (!confirm('Delete "' + x.title + '" and its files? This cannot be undone.')) return; const r = await Z.api('admin/movie/' + x.id + '/delete', { method: 'POST' }); if (r.ok) list(); else alert(r.message); });
+}
+
+/* ---------- uploads straight to R2 ---------- */
+function putBlob(url, blob, onp) {
+  return new Promise((res, rej) => { const x = new XMLHttpRequest(); x.open('PUT', url); x.upload.onprogress = e => onp && onp(e.loaded);
+    x.onload = () => x.status >= 200 && x.status < 300 ? res((x.getResponseHeader('ETag') || '').replace(/"/g, '')) : rej(new Error('Storage refused the upload (HTTP ' + x.status + ')'));
+    x.onerror = () => rej(new Error('Upload connection failed')); x.send(blob); });
+}
+async function upPoster(file, bar) {
+  const s = await Z.api('admin/upload/start', { method: 'POST', body: JSON.stringify({ kind: 'poster', filename: file.name, size: file.size }) }); if (!s.ok) throw new Error(s.message);
+  await putBlob(s.url, file, n => bar(n / file.size)); return s.key;
+}
+async function upVideo(file, bar) {
+  /* Resumable: the upload id is remembered in this browser. Choose the same file again after a break and it continues. */
+  const sk = 'zfup:' + file.name + ':' + file.size + ':' + file.lastModified;
+  let s = null; const done = {};
+  try {
+    const saved = JSON.parse(localStorage.getItem(sk) || 'null');
+    if (saved && saved.key && saved.upload_id) {
+      const r = await Z.api('admin/upload/resume', { method: 'POST', body: JSON.stringify({ key: saved.key, upload_id: saved.upload_id }) });
+      if (r.ok) { s = saved; r.parts.forEach(p => { done[p.n] = p.etag; }); } else localStorage.removeItem(sk);
+    }
+  } catch (e) { /* no saved upload, or storage blocked: start fresh */ }
+  if (!s) {
+    const st = await Z.api('admin/upload/start', { method: 'POST', body: JSON.stringify({ kind: 'video', filename: file.name, size: file.size }) }); if (!st.ok) throw new Error(st.message);
+    s = { key: st.key, upload_id: st.upload_id, part_size: st.part_size, parts: st.parts };
+    try { localStorage.setItem(sk, JSON.stringify(s)); } catch (e) { /* works without resume */ }
+  }
+  const partLen = n => n === s.parts ? file.size - (s.parts - 1) * s.part_size : s.part_size;
+  const loaded = {}; Object.keys(done).forEach(n => { loaded[n] = partLen(+n); });
+  const resumedBytes = Object.values(loaded).reduce((a, b) => a + b, 0);
+  const t0 = Date.now(); let lastT = t0, lastB = resumedBytes, speed = 0;
+  const total = () => Object.values(loaded).reduce((a, b) => a + b, 0);
+  const upd = (force) => {
+    const now = Date.now(), b = total();
+    if (force || now - lastT >= 1000) { const inst = (b - lastB) / Math.max(0.001, (now - lastT) / 1000); speed = speed ? speed * 0.7 + inst * 0.3 : inst; lastT = now; lastB = b; }
+    bar(b / file.size, { speed, left: speed > 1000 ? (file.size - b) / speed : 0, resumed: resumedBytes > 0 && b <= resumedBytes + 1 });
+  };
+  upd(true);
+  let fatal = null; const queue = []; for (let n = 1; n <= s.parts; n++) if (!done[n]) queue.push(n);
+  async function worker() {
+    while (queue.length && !fatal) {
+      const n = queue.shift(); const blob = file.slice((n - 1) * s.part_size, Math.min(file.size, n * s.part_size));
+      for (let t = 1; ; t++) {
+        try { const u = await Z.api('admin/upload/part', { method: 'POST', body: JSON.stringify({ key: s.key, upload_id: s.upload_id, part: n }) }); if (!u.ok) throw new Error(u.message);
+          const etag = await putBlob(u.url, blob, l => { loaded[n] = l; upd(); }); if (!etag) throw new Error('Storage did not return an ETag. Bucket CORS must expose ETag.'); loaded[n] = blob.size; done[n] = etag; upd(); break; }
+        catch (e) { loaded[n] = 0; if (t >= 6 || /CORS|ETag/.test(e.message)) { fatal = e; return; } await new Promise(r => setTimeout(r, 2000 * t)); }
+      }
+    }
+  }
+  await Promise.all([worker(), worker(), worker()]);
+  if (fatal) throw new Error((/CORS|ETag/.test(fatal.message) ? fatal.message : 'The connection dropped.') + ' Nothing is lost: choose the same file again and the upload continues where it stopped.');
+  const parts = Object.keys(done).map(n => ({ n: +n, etag: done[n] }));
+  const c = await Z.api('admin/upload/complete', { method: 'POST', body: JSON.stringify({ key: s.key, upload_id: s.upload_id, parts }) }); if (!c.ok) throw new Error(c.message + ' Choose the same file again to retry the final step.');
+  try { localStorage.removeItem(sk); } catch (e) { /* fine */ }
+  return s.key;
+}
+function picker(el, accept, kind) {   // wires one "choose file" block; returns a state object with .key
+  const st = { key: el.dataset.key || '', busy: false };
+  el.innerHTML = `${kind === 'poster' ? '<img class="pv" alt="">' : ''}<div style="flex:1;min-width:150px"><div class="note" data-n>${st.key ? 'File saved: ' + E(st.key.split('/').pop()) : 'No file yet'}</div><div class="prog" style="margin-top:6px;display:none"><i></i></div><div class="err" data-e></div></div><label class="sm" style="margin:0;cursor:pointer;color:var(--text)">Choose file<input type="file" accept="${accept}" hidden></label>`;
+  const pv = el.querySelector('.pv'); if (pv && el.dataset.src) pv.src = el.dataset.src; else if (pv) pv.style.visibility = 'hidden';
+  el.querySelector('input').onchange = async e => { const f = e.target.files[0]; if (!f) return; const pr = el.querySelector('.prog'), bar = pr.firstElementChild, er = el.querySelector('[data-e]'), nt = el.querySelector('[data-n]');
+    er.textContent = ''; pr.style.display = 'block'; st.busy = true; nt.textContent = 'Preparing ' + f.name + ' ...';
+    try { st.key = await (kind === 'poster' ? upPoster : upVideo)(f, (p, i) => { bar.style.width = Math.round(p * 100) + '%'; if (i) nt.textContent = (i.resumed ? 'Continuing ' : 'Uploading ') + f.name + ' - ' + Math.round(p * 100) + '%' + (i.speed > 1000 ? ' - ' + (i.speed * 8 / 1e6).toFixed(1) + ' Mbit/s' : '') + (i.left > 0 ? ' - about ' + (i.left >= 3600 ? Math.floor(i.left / 3600) + ' h ' + Math.round(i.left % 3600 / 60) + ' min' : i.left >= 90 ? Math.round(i.left / 60) + ' min' : Math.round(i.left) + ' s') + ' left' : ''); }); nt.textContent = 'Uploaded: ' + f.name; bar.style.width = '100%'; if (pv) { pv.src = URL.createObjectURL(f); pv.style.visibility = 'visible'; } }
+    catch (x) { er.textContent = x.message; nt.textContent = 'Upload failed'; } finally { st.busy = false; } };
+  return st;
+}
+
+
+/* ---------- Inbox: films offered by filmmakers and problem reports ---------- */
+async function inboxView() {
+  clearInterval(window.__imp);
+  const r = await Z.api('admin/inbox'); if (!r.ok) { login(r.message); return; }
+  const ex = x => E(x || '');
+  app.innerHTML = `<div class="bar"><h1>Inbox</h1><div class="acts"><button class="bt alt" id="back">Back to films</button></div></div><div id="msg"></div>
+  <h2 style="font-size:16px;margin:10px 0">Films offered by filmmakers</h2>
+  ${r.submissions.map(s => `<div class="box"><b>${ex(s.title)}</b> <span class="st ${s.status === 'approved' ? 'pub' : ''}">${s.status}</span><div class="note">${ex(s.name)} - ${ex(s.contact)} - ${ex(s.created_at)} UTC</div>
+   <div class="note">${ex(s.year)} ${ex(s.language)} ${ex(s.category)}</div><div style="margin:6px 0">${ex(s.description)}</div>
+   ${s.video_url ? `<div class="note">File link: <a href="${ex(s.video_url)}" target="_blank" rel="noopener noreferrer">${ex(s.video_url)}</a></div>` : ''}${s.youtube_url ? `<div class="note">YouTube: <a href="${ex(s.youtube_url)}" target="_blank" rel="noopener noreferrer">${ex(s.youtube_url)}</a></div>` : ''}${s.notes ? `<div class="note">Notes: ${ex(s.notes)}</div>` : ''}
+   ${s.status === 'new' ? `<div class="acts" style="margin-top:8px"><button class="sm" data-a="${s.id}">Approve (adds a hidden film)</button> <button class="sm red" data-r="${s.id}">Reject</button></div>` : ''}</div>`).join('') || '<div class="note">Nothing yet.</div>'}
+  <h2 style="font-size:16px;margin:18px 0 10px">Problem and copyright reports</h2>
+  ${r.reports.map(x => `<div class="box"><span class="st ${x.status === 'done' ? 'pub' : ''}">${x.status}</span> <b>${ex(x.name) || 'No name'}</b> - ${ex(x.contact)} <span class="note">${ex(x.created_at)} UTC</span>
+   ${x.film_url ? `<div class="note">Film: ${ex(x.film_url)}</div>` : ''}<div style="margin:6px 0">${ex(x.message)}</div>
+   ${x.status === 'new' ? `<div class="acts"><button class="sm red" data-u="${x.id}">Hide that film and close</button> <button class="sm" data-c="${x.id}">Close without hiding</button></div>` : ''}</div>`).join('') || '<div class="note">Nothing yet.</div>'}`;
+  $('#back').onclick = list;
+  const act = async (url, body, ask) => { if (ask && !confirm(ask)) return; const q = await Z.api(url, { method: 'POST', body: JSON.stringify(body || {}) }); if (!q.ok) { $('#msg').innerHTML = `<div class="err">${E(q.message || 'Failed.')}</div>`; return; } await inboxView(); $('#msg').innerHTML = `<div class="ok">${E(q.message || 'Done.')}</div>`; };
+  app.querySelectorAll('[data-a]').forEach(b => b.onclick = () => act('admin/submissions/' + b.dataset.a + '/approve', {}, 'Approve this film? It is added as a hidden film. You publish it later.'));
+  app.querySelectorAll('[data-r]').forEach(b => b.onclick = () => act('admin/submissions/' + b.dataset.r + '/reject', {}, 'Reject this submission?'));
+  app.querySelectorAll('[data-u]').forEach(b => b.onclick = () => act('admin/reports/' + b.dataset.u + '/resolve', { action: 'unpublish' }, 'Hide the film from the public and close this report?'));
+  app.querySelectorAll('[data-c]').forEach(b => b.onclick = () => act('admin/reports/' + b.dataset.c + '/resolve', {}));
+}
+/* ---------- Import from links: the server downloads the films, nothing uses your own internet ---------- */
+function importView() {
+  clearInterval(window.__imp);
+  app.innerHTML = `<div class="bar"><h1>Import from links</h1><div class="acts"><button class="bt alt" id="back">Back to films</button></div></div>
+  <form class="box" id="imf">
+    <label>Paste one link per line. Google Drive and Dropbox share links work, and so does any direct https link to an MP4 file.<br><span class="note">Optional: <b>Title | video link | poster link</b> on one line. Without a title, the file name is used. You can edit everything afterwards.</span></label>
+    <textarea id="links" style="min-height:140px" placeholder="https://drive.google.com/file/d/.../view&#10;My Film Title | https://www.dropbox.com/s/.../film.mp4?dl=0 | https://example.com/poster.jpg" required></textarea>
+    <div class="g3"><div><label>Category (optional)</label><input id="ic" maxlength="60" placeholder="Action, Drama..."></div><div><label>Translator, e.g. Vj name (optional)</label><input id="it" maxlength="80"></div><div><label>Language (optional)</label><input id="il" maxlength="60" placeholder="Luganda"></div></div>
+    <div class="g2"><div><label>Access</label><select id="ia"><option value="free">Free</option><option value="premium">Premium (enforced once payments are on)</option></select></div><div class="chk"><input type="checkbox" id="ip" checked><label for="ip" style="margin:0">Publish as soon as the film is ready</label></div></div>
+    <details><summary>Add the pasted link as another quality of a film that is already on the site</summary><div class="g2"><div><label>Film</label><select id="iaf"><option value="">- a new film (normal import) -</option>${LIST.filter(x => x.type === 'movie').map(x => `<option value="${x.id}">${E(x.title)}</option>`).join('')}</select></div><div><label>Quality of this link</label><select id="iaq">${['2160p', '1440p', '1080p', '720p', '576p', '480p', '360p', '240p', 'Low data'].map(q => `<option${q === '720p' ? ' selected' : ''}>${q}</option>`).join('')}</select></div></div><div class="note" style="margin-top:6px">Paste just one link above when you use this. Viewers then get a quality menu with Auto on that film.</div></details>
+    <div class="chk" style="margin-top:16px"><input type="checkbox" id="icf"><label for="icf" style="margin:0;color:var(--text)">I own these films, or I have permission to show them on this site.</label></div>
+    <div class="note" style="margin-top:6px">This is saved with each film. MKV and AVI files, and web pages instead of files, cannot be imported: ask for an MP4 (H.264) download link.</div>
+    <div class="err" id="ie"></div><div class="acts" style="margin-top:14px"><button class="bt" id="isave">Start importing</button></div>
+  </form>
+  <div class="box" style="margin-top:16px"><div class="bar" style="margin-bottom:8px"><b>Imports</b><span class="note" id="ihint"></span></div><div id="jobs" class="note">Loading...</div></div>`;
+  $('#back').onclick = list;
+  const line = s => { const p = s.split('|').map(x => x.trim()); if (p.length === 1) return { url: p[0] }; if (p.length === 2) return /^https?:/i.test(p[0]) ? { url: p[0], poster: p[1] } : { title: p[0], url: p[1] }; return { title: p[0], url: p[1], poster: p[2] }; };
+  $('#imf').onsubmit = async e => { e.preventDefault(); const er = $('#ie'); er.textContent = '';
+    const items = $('#links').value.split(String.fromCharCode(10)).map(s => s.trim()).filter(Boolean).map(line);
+    if (!items.length) { er.textContent = 'Paste at least one link.'; return; }
+    if (!$('#icf').checked) { er.textContent = 'Tick the box to confirm you own these films or have permission to show them.'; return; }
+    $('#isave').disabled = true; const r = await Z.api('admin/imports', { method: 'POST', body: JSON.stringify({ items, confirm: true, category: $('#ic').value, translator: $('#it').value, language: $('#il').value, access: $('#ia').value, publish: $('#ip').checked, attach_movie_id: +($('#iaf').value || 0), quality_label: $('#iaq').value }) }); $('#isave').disabled = false;
+    if (!r.ok) { er.textContent = r.message || 'Could not start.'; return; }
+    er.innerHTML = (r.started ? `<span class="ok">Started ${r.started} import(s). They keep running even if you close this page.</span>` : '') + (r.errors && r.errors.length ? '<br>' + r.errors.map(x => 'Line ' + x.line + ': ' + E(x.message)).join('<br>') : '');
+    if (r.started) $('#links').value = ''; refresh(); };
+  const fmt = j => { const pill = { queued: 'Waiting', running: 'Downloading', done: 'Ready', failed: 'Failed' }[j.status] || j.status;
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b style="flex:1;min-width:140px">${E(j.title)}</b><span class="st ${j.status === 'done' ? 'pub' : ''}">${pill}</span>
+      ${j.status === 'done' && j.slug ? `<a class="sm" href="/watch/${encodeURIComponent(j.slug)}" target="_blank" style="color:var(--text)">Open</a>` : ''}${j.status === 'failed' ? `<button class="sm" data-r="${j.id}">Retry</button>` : ''}${j.status !== 'running' ? `<button class="sm red" data-x="${j.id}">Remove</button>` : ''}</div>
+      <div class="note">${E(j.host)}${j.status === 'running' || j.status === 'queued' ? ` - ${j.percent}%${j.total_mb ? ` (${j.mb} of ${j.total_mb} MB)` : ''}` : ''}</div>
+      ${j.status === 'running' || j.status === 'queued' ? `<div class="prog" style="margin-top:6px"><i style="width:${j.percent}%"></i></div>` : ''}${j.error ? `<div class="${j.status === 'failed' ? 'err' : 'note'}">${E(j.error)}</div>` : ''}</div>`; };
+  async function refresh() {
+    const r = await Z.api('admin/imports'); const box = $('#jobs'); if (!box) { clearInterval(window.__imp); return; }
+    if (!r.ok) { box.textContent = r.message || 'Could not load.'; return; }
+    box.innerHTML = r.items.length ? r.items.map(fmt).join('') : 'Nothing imported yet.'; $('#ihint').textContent = r.active ? r.active + ' in progress, updating by itself' : '';
+    box.querySelectorAll('[data-r]').forEach(b => b.onclick = async () => { await Z.api('admin/imports/' + b.dataset.r + '/retry', { method: 'POST' }); refresh(); });
+    box.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => { await Z.api('admin/imports/' + b.dataset.x + '/delete', { method: 'POST' }); refresh(); });
+  }
+  refresh(); window.__imp = setInterval(refresh, 4000);
+}
+
+async function form(id) {
+  clearInterval(window.__imp);
+  let m = { type: 'movie', title: '', description: '', year: '', language: '', category: '', translator: '', duration_min: 0, access: 'free', status: 'draft', featured: 0, poster_key: '', video_key: '', rights_holder: '', rights_type: '', rights_notes: '', episodes: [], poster: '', video_label: 'Original', sources: [] };
+  if (id) { const r = await Z.api('admin/movie/' + id); if (!r.ok) { alert(r.message); return; } m = r.movie; }
+  app.innerHTML = `<div class="bar"><h1>${id ? 'Edit film' : 'Add a film'}</h1><div class="acts"><button class="bt alt" id="back">Back to list</button></div></div>
+  <form class="box" id="f"><div class="g2"><div><label>Title</label><div style="display:flex;gap:8px"><input name="title" required maxlength="190" value="${E(m.title)}"><button type="button" class="sm" id="fd" style="white-space:nowrap">Find details</button></div></div><div><label>Type</label><select name="type"><option value="movie">Movie</option><option value="series">Series (episodes)</option></select></div></div>
+  <div id="lk"></div>
+  <div class="g3"><div><label>Translator (shown on the card, e.g. Vj name)</label><input name="translator" maxlength="80" value="${E(m.translator)}"></div><div><label>Category</label><input name="category" maxlength="60" value="${E(m.category)}" placeholder="Action, Drama, Kids..."></div><div><label>Language</label><input name="language" maxlength="60" value="${E(m.language)}" placeholder="Luganda"></div></div>
+  <div class="g3"><div><label>Year</label><input name="year" maxlength="4" value="${E(m.year)}"></div><div><label>Length (minutes)</label><input name="duration_min" type="number" min="0" value="${+m.duration_min || ''}"></div><div><label>Access</label><select name="access"><option value="free">Free</option><option value="premium">Premium (enforced once payments are on)</option></select></div></div>
+  <label>Description</label><textarea name="description" maxlength="4000">${E(m.description)}</textarea>
+  <label>YouTube link (optional: show a film from your own YouTube video instead of uploading a file)</label><input name="youtube_url" maxlength="500" placeholder="https://www.youtube.com/watch?v=..." value="${E(m.youtube_id ? 'https://www.youtube.com/watch?v=' + m.youtube_id : '')}">
+  <label>Poster (JPG, PNG or WebP, portrait, up to 8 MB)</label><div class="up" id="pp" data-key="${E(m.poster_key)}" data-src="${E(m.poster || '')}"></div>
+  <div id="vbox"></div>
+  <div class="g2"><div><label>Status</label><select name="status"><option value="draft">Draft (hidden)</option><option value="published">Published</option></select></div><div class="chk"><input type="checkbox" name="featured" id="ft" ${+m.featured ? 'checked' : ''}><label for="ft" style="margin:0">Show in the top slider</label></div></div>
+  <details><summary>Rights details (optional, only you see this)</summary><div class="g2"><div><label>Rights holder</label><input name="rights_holder" maxlength="190" value="${E(m.rights_holder)}"></div><div><label>How you hold the rights</label><select name="rights_type"><option value="">Not stated</option><option value="own">My own film</option><option value="licensed">Licensed to me</option><option value="public-domain">Public domain</option><option value="other">Other</option></select></div></div><label>Notes (agreement reference, dates)</label><textarea name="rights_notes" maxlength="2000">${E(m.rights_notes)}</textarea></details>
+  <div class="err" id="fe"></div><div class="acts" style="margin-top:16px"><button class="bt" id="save">Save</button></div></form>`;
+  const f = $('#f'); f.type.value = m.type; f.access.value = m.access; f.status.value = m.status; f.rights_type.value = m.rights_type || '';
+  const poster = picker($('#pp'), 'image/jpeg,image/png,image/webp', 'poster');
+  let tmdbId = +(m.tmdb_id || 0);
+  let video = null, eps = [], srcs = (m.sources || []).map(s => ({ id: s.id, label: s.label, key: s.video_key }));
+  const QL = ['2160p', '1440p', '1080p', '720p', '576p', '480p', '360p', '240p', 'Low data'], qopt = (sel, orig) => (orig ? ['Original'] : []).concat(QL).map(q => `<option${q === sel ? ' selected' : ''}>${q}</option>`).join('');
+  function drawSrcs() {
+    const box = $('#sq'); if (!box) return;
+    box.innerHTML = srcs.map((s, i) => `<div class="ep" style="grid-template-columns:120px 1fr auto"><select data-si="${i}">${qopt(s.label, false)}</select><div class="up" id="sp${i}" data-key="${E(s.key)}" style="padding:6px 10px"></div><button type="button" class="sm red" data-sx="${i}">Remove</button></div>`).join('');
+    srcs.forEach((s, i) => { s._st = picker($('#sp' + i), 'video/mp4,video/webm,.mp4,.webm,.m4v', 'video'); });
+    box.querySelectorAll('[data-si]').forEach(n => n.onchange = () => { srcs[+n.dataset.si].label = n.value; });
+    box.querySelectorAll('[data-sx]').forEach(b => b.onclick = () => { srcs.splice(+b.dataset.sx, 1); drawSrcs(); });
+  }
+  function vbox() {
+    const box = $('#vbox');
+    if (f.type.value === 'movie') { box.innerHTML = '<div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap"><div style="flex:1;min-width:220px"><label>Main video file (MP4 with H.264 video and AAC sound plays everywhere; WebM also works)</label></div><div style="width:150px"><label>Quality of this file</label><select id="vl">' + qopt(m.video_label || 'Original', true) + '</select></div></div><div class="up" id="vp" data-key="' + E(m.video_key) + '"></div><div class="note" style="margin-top:6px">Large files upload in parts straight to storage and retry by themselves. Keep this page open until it says Uploaded.</div>'
+      + '<label style="margin-top:16px">More qualities of the same film (optional). Viewers get a quality menu with Auto. Each file must be an MP4/WebM of the same film at that quality.</label><div id="sq"></div><button type="button" class="bt alt" id="asq" style="margin-top:6px">Add another quality</button>';
+      video = picker($('#vp'), 'video/mp4,video/webm,.mp4,.webm,.m4v', 'video'); eps = []; drawSrcs(); $('#asq').onclick = () => { srcs.push({ id: 0, label: '480p', key: '' }); drawSrcs(); }; }
+    else { video = null; box.innerHTML = '<label>Episodes</label><div id="el"></div><button type="button" class="bt alt" id="ae" style="margin-top:8px">Add an episode</button>'; if (!eps.length) eps = (m.episodes || []).map(e => ({ id: e.id, num: e.num, title: e.title, key: e.video_key })); drawEps(); $('#ae').onclick = () => { eps.push({ id: 0, num: eps.length + 1, title: '', key: '' }); drawEps(); }; }
+  }
+  function drawEps() {
+    $('#el').innerHTML = eps.map((e, i) => `<div class="ep"><input type="number" min="1" value="${e.num}" data-i="${i}" data-f="num" title="Episode number"><input value="${E(e.title)}" data-i="${i}" data-f="title" placeholder="Episode title"><div class="up" id="ep${i}" data-key="${E(e.key)}" style="padding:6px 10px"></div><button type="button" class="sm red" data-rm="${i}">Remove</button></div>`).join('');
+    eps.forEach((e, i) => { e._st = picker($('#ep' + i), 'video/mp4,video/webm,.mp4,.webm,.m4v', 'video'); });
+    $('#el').querySelectorAll('[data-f]').forEach(n => n.oninput = () => { eps[+n.dataset.i][n.dataset.f] = n.dataset.f === 'num' ? +n.value : n.value; });
+    $('#el').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { eps.splice(+b.dataset.rm, 1); drawEps(); });
+  }
+  /* Film details lookup (TMDB). Fills in text only; the poster is copied only if the owner switched poster import on. */
+  $('#fd').onclick = async () => {
+    const box = $('#lk'); const q = f.title.value.trim(); if (!q) { box.innerHTML = '<div class="err">Type the film title first.</div>'; return; }
+    box.innerHTML = '<div class="note">Searching...</div>';
+    const r = await Z.api('admin/lookup?q=' + encodeURIComponent(q) + (f.year.value ? '&year=' + encodeURIComponent(f.year.value) : ''));
+    if (!r.ok) { box.innerHTML = `<div class="err">${E(r.message || 'Lookup failed.')}</div>`; return; }
+    if (!r.enabled) { box.innerHTML = `<div class="note">${E(r.message)}</div>`; return; }
+    if (!r.items.length) { box.innerHTML = '<div class="note">Nothing found. Try the English title, or fill the details in yourself.</div>'; return; }
+    box.innerHTML = '<div class="box" style="margin-top:10px">' + r.items.map((x, i) => `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">${x.thumb ? `<img src="${E(x.thumb)}" alt="" style="width:46px;height:68px;object-fit:cover;border-radius:5px">` : '<div style="width:46px"></div>'}
+      <div style="flex:1;min-width:0"><b>${E(x.title)}</b> <span class="note">${E(x.year)} ${E(x.genres.join(', '))}</span><div class="note" style="margin-top:3px">${E(x.overview.slice(0, 160))}${x.overview.length > 160 ? '...' : ''}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px"><button type="button" class="sm" data-use="${i}">Use details</button>${r.images && x.poster_path ? `<button type="button" class="sm" data-pic="${i}">Use poster</button>` : ''}</div></div>`).join('') + '<div class="note" style="margin-top:8px">Details from TMDB. Their free access is for non-commercial use: a site that sells ads needs TMDB\'s commercial licence.</div></div>';
+    box.querySelectorAll('[data-use]').forEach(b => b.onclick = async () => { const x = r.items[+b.dataset.use]; f.title.value = x.title || f.title.value; if (x.year) f.year.value = x.year; if (x.overview) f.description.value = x.overview; if (x.genres[0]) f.category.value = x.genres[0]; tmdbId = x.tmdb_id || tmdbId;
+      const rt = await Z.api('admin/lookup/runtime?id=' + x.tmdb_id); if (rt.ok && rt.minutes) f.duration_min.value = rt.minutes; box.innerHTML = '<div class="ok">Details filled in. Check them, then save.</div>'; });
+    box.querySelectorAll('[data-pic]').forEach(b => b.onclick = async () => { const x = r.items[+b.dataset.pic]; b.disabled = true; b.textContent = 'Copying...';
+      const p = await Z.api('admin/lookup/poster', { method: 'POST', body: JSON.stringify({ path: x.poster_path }) });
+      if (!p.ok) { b.disabled = false; b.textContent = 'Use poster'; alert(p.message); return; }
+      poster.key = p.key; const pv = $('#pp .pv'); if (pv && p.poster) { pv.src = p.poster; pv.style.visibility = 'visible'; } const nt = $('#pp [data-n]'); if (nt) nt.textContent = 'Poster copied to storage'; b.textContent = 'Poster set'; });
+  };
+  vbox(); f.type.onchange = vbox; $('#back').onclick = list;
+  f.onsubmit = async e => { e.preventDefault(); const er = $('#fe'); er.textContent = '';
+    if (poster.busy || (video && video.busy) || eps.some(x => x._st && x._st.busy) || srcs.some(x => x._st && x._st.busy)) { er.textContent = 'Wait for the upload to finish first.'; return; }
+    const d = Object.fromEntries(new FormData(f)); d.featured = $('#ft').checked ? 1 : 0; d.poster_key = poster.key; d.video_key = video ? video.key : ''; d.tmdb_id = tmdbId;
+    if (f.type.value === 'movie') { d.video_label = ($('#vl') || {}).value || 'Original'; d.sources = srcs.map(x => ({ id: x.id, label: x.label, video_key: x._st ? x._st.key : x.key })).filter(x => x.video_key); }
+    if (f.type.value === 'series') d.episodes = eps.map(x => ({ id: x.id, num: x.num, title: x.title, video_key: x._st ? x._st.key : x.key }));
+    $('#save').disabled = true; const r = await Z.api(id ? 'admin/movie/' + id : 'admin/movies', { method: 'POST', body: JSON.stringify(d) }); $('#save').disabled = false;
+    if (r.ok) list(); else er.textContent = r.message || 'Could not save.'; };
+}
+boot();
+</script></body></html>
+

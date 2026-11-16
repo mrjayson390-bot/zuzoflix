@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Submit your film</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"><link rel="stylesheet" href="/assets/css/site.css?v=13"></head><body><main class="wrap page"><h1 class="ptitle">Submit your film</h1>
+<div class="page"><p>Are you a filmmaker, producer, translator or distributor? Offer your film to be shown on Zuzoflix. Only submit a film you made, or that you have written permission to offer. We look at every submission, and nothing goes on the site until we have checked it and spoken to you.</p>
+<form class="pform" id="pf" data-api="submit">
+<div class="hp"><label>Leave this empty</label><input name="website" tabindex="-1" autocomplete="off"></div>
+<div class="two"><div><label>Your name *</label><input name="name" maxlength="120" required></div><div><label>Phone, WhatsApp or email *</label><input name="contact" maxlength="190" required></div></div>
+<div><label>Film title *</label><input name="title" maxlength="190" required></div>
+<div class="two"><div><label>Year</label><input name="year" maxlength="4" inputmode="numeric"></div><div><label>Language</label><input name="language" maxlength="60" placeholder="Luganda, English..."></div></div>
+<div><label>Category</label><input name="category" maxlength="60" placeholder="Drama, Comedy, Action..."></div>
+<div><label>Short story of the film</label><textarea name="description" maxlength="2000"></textarea></div>
+<div><label>Link to the film file</label><input name="video_url" type="url" placeholder="https://... a Google Drive, Dropbox or direct MP4 link"><div class="hint">Or give a YouTube link below. One of the two is needed.</div></div>
+<div><label>YouTube link (your own video)</label><input name="youtube_url" type="url" placeholder="https://www.youtube.com/watch?v=..."></div>
+<div><label>Poster picture link</label><input name="poster_url" type="url" placeholder="https://..."></div>
+<div><label>Anything else we should know (for example: who owns the rights)</label><textarea name="notes" maxlength="1000"></textarea></div>
+<div class="tick"><input type="checkbox" name="confirm" id="cf"><label for="cf">I confirm that I own this film, or that the owner has given me permission to offer it to Zuzoflix.</label></div>
+<button class="btn" type="submit">Send film</button><div id="fm"></div></form></div></main><script src="/assets/js/app.js?v=15"></script><script>
+(async()=>{await Z.boot('');const f=document.getElementById('pf'),m=document.getElementById('fm'),t0=Date.now();
+const u=new URLSearchParams(location.search).get('film');if(u&&f.film_url)f.film_url.value=u;
+f.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f));d.confirm=f.confirm?f.confirm.checked:undefined;d.ts=t0;
+const b=f.querySelector('button');b.disabled=true;m.className='';m.textContent='Sending...';
+const r=await Z.api(f.dataset.api,{method:'POST',body:JSON.stringify(d)});b.disabled=false;
+m.className='fmsg '+(r.ok?'ok':'err');m.textContent=r.message||(r.ok?'Sent.':'Could not send. Please try again.');if(r.ok)f.reset();};})();
+</script></body></html>

@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "big-buck-bunny", "title": "Big Buck Bunny", "year": "2008", "category": "Animation", "language": "No dialogue", "translator": "Open movie", "duration_min": 10, "featured": 1,
+    "description": "A giant, gentle rabbit is bothered by three rude forest rodents, and decides to teach them a lesson. A short animated comedy for all ages.\n\nCredit: (c) copyright 2008, Blender Foundation | www.bigbuckbunny.org. Licensed under Creative Commons Attribution 3.0.",
+    "video": "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4", "file": "big-buck-bunny.mp4", "poster": "https://archive.org/services/img/BigBuckBunny_124",
+    "rights_holder": "Blender Foundation", "rights_type": "licensed", "rights_notes": "Creative Commons Attribution 3.0 (CC BY 3.0). Commercial use allowed with credit. https://creativecommons.org/licenses/by/3.0/ Source: https://archive.org/details/BigBuckBunny_124"
+  },
+  {
+    "slug": "elephants-dream", "title": "Elephants Dream", "year": "2006", "category": "Animation", "language": "English", "translator": "Open movie", "duration_min": 11, "featured": 0,
+    "description": "Two strange characters explore a capricious and seemingly infinite machine. The first open movie made with free software.\n\nCredit: (c) copyright 2006, Blender Foundation / Netherlands Media Art Institute | www.elephantsdream.org. Licensed under a Creative Commons Attribution licence (CC BY).",
+    "video": "https://archive.org/download/ElephantsDream/ed_hd.mp4", "file": "elephants-dream.mp4", "poster": "https://archive.org/services/img/ElephantsDream",
+    "rights_holder": "Orange Open Movie Project / Blender Foundation", "rights_type": "licensed", "rights_notes": "Creative Commons Attribution (the Archive lists CC BY 3.0 US). Commercial use allowed with credit. Source: https://archive.org/details/ElephantsDream"
+  },
+  {
+    "slug": "sintel", "title": "Sintel", "year": "2010", "category": "Fantasy", "language": "English", "translator": "Open movie", "duration_min": 15, "featured": 1,
+    "description": "A lonely young woman searches the world for the baby dragon she once befriended and lost. An animated fantasy adventure.\n\nCredit: (c) copyright Blender Foundation | www.sintel.org. Licensed under Creative Commons Attribution 3.0.",
+    "video": "https://archive.org/download/Sintel/sintel-2048-stereo.mp4", "file": "sintel.mp4", "poster": "https://archive.org/download/Sintel/Poster.jpg",
+    "rights_holder": "Blender Foundation", "rights_type": "licensed", "rights_notes": "Creative Commons Attribution 3.0 (CC BY 3.0). Commercial use allowed with credit. https://creativecommons.org/licenses/by/3.0/ Source: https://archive.org/details/Sintel"
+  },
+  {
+    "slug": "cosmos-laundromat", "title": "Cosmos Laundromat: First Cycle", "year": "2015", "category": "Animation", "language": "English", "translator": "Open movie", "duration_min": 12, "featured": 0,
+    "description": "On a desolate island, a suicidal sheep named Franck meets a quirky salesman who offers him the gift of a lifetime.\n\nCredit: (c) copyright Blender Foundation | gooseberry.blender.org. Licensed under Creative Commons Attribution 4.0.",
+    "video": "https://archive.org/download/CosmosLaundromatFirstCycle/Cosmos%20Laundromat%20-%20First%20Cycle%20%281080p%29.mp4", "file": "cosmos-laundromat.mp4", "poster": "https://archive.org/services/img/CosmosLaundromatFirstCycle",
+    "rights_holder": "Blender Foundation", "rights_type": "licensed", "rights_notes": "Creative Commons Attribution 4.0 (CC BY 4.0). Commercial use allowed with credit. https://creativecommons.org/licenses/by/4.0/ Source: https://archive.org/details/CosmosLaundromatFirstCycle"
+  }
+]
